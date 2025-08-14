@@ -1,26 +1,34 @@
 name: ci-advanced
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch: {}  # 允许在 Actions 页手动点运行
+  workflow_dispatch: {}
+
+# 让所有 run 步骤都在子目录里执行
+defaults:
+  run:
+    working-directory: software-testing-2025-advanced
 
 jobs:
   python-suite:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install Chrome
         uses: browser-actions/setup-chrome@v1
+
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
       - name: Run pytest (HTML + coverage + screenshots)
         run: |
           mkdir -p artifacts
@@ -30,56 +38,67 @@ jobs:
             --cov=app --cov=unit_test --cov=web_test \
             --cov-report=xml:artifacts/coverage.xml \
             --cov-report=html:artifacts/htmlcov
-      - name: Upload reports (pytest)
+
+      # 注意：upload-artifact 的路径是相对“仓库根目录”，
+      # 所以这里加上子目录前缀 software-testing-2025-advanced/
+      - name: Upload pytest HTML
         uses: actions/upload-artifact@v4
         with:
           name: pytest_html_report
-          path: artifacts/pytest_report.html
-      - name: Upload coverage (HTML)
+          path: software-testing-2025-advanced/artifacts/pytest_report.html
+
+      - name: Upload coverage HTML
         uses: actions/upload-artifact@v4
         with:
           name: coverage_html
-          path: artifacts/htmlcov
+          path: software-testing-2025-advanced/artifacts/htmlcov
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: selenium_screenshots
-          path: artifacts/screenshots
+          path: software-testing-2025-advanced/artifacts/screenshots
 
   java-maven:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: maven
+
       - name: Build & test & coverage & spotbugs
         run: mvn -B -f java_project/pom.xml clean verify spotbugs:spotbugs
+
       - name: Upload surefire reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maven_surefire_reports
-          path: java_project/target/surefire-reports
+          path: software-testing-2025-advanced/java_project/target/surefire-reports
+
       - name: Upload jacoco HTML
         uses: actions/upload-artifact@v4
         with:
           name: jacoco_html
-          path: java_project/target/site/jacoco
-      - name: Upload spotbugs reports
+          path: software-testing-2025-advanced/java_project/target/site/jacoco
+
+      - name: Upload spotbugs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: spotbugs_reports
           path: |
-            java_project/target/spotbugs.html
-            java_project/target/spotbugsXml.xml
+            software-testing-2025-advanced/java_project/target/spotbugs.html
+            software-testing-2025-advanced/java_project/target/spotbugsXml.xml
+
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
           name: maven_target
-          path: java_project/target/*.jar
+          path: software-testing-2025-advanced/java_project/target/*.jar
