@@ -1,8 +1,11 @@
-
 name: ci-advanced
+
 on:
   push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}  # 允许在 Actions 页手动点运行
 
 jobs:
   python-suite:
@@ -14,35 +17,30 @@ jobs:
           python-version: '3.11'
       - name: Install Chrome
         uses: browser-actions/setup-chrome@v1
-      - name: Install dependencies
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run pytest with coverage & reports
+      - name: Run pytest (HTML + coverage + screenshots)
         run: |
           mkdir -p artifacts
-          pytest -q             --html=artifacts/pytest_report.html --self-contained-html             --junitxml=artifacts/pytest_junit.xml             --cov=app --cov=unit_test --cov=web_test             --cov-report=xml:artifacts/coverage.xml             --cov-report=html:artifacts/htmlcov
-      - name: Upload pytest HTML report
+          pytest -q \
+            --html=artifacts/pytest_report.html --self-contained-html \
+            --junitxml=artifacts/pytest_junit.xml \
+            --cov=app --cov=unit_test --cov=web_test \
+            --cov-report=xml:artifacts/coverage.xml \
+            --cov-report=html:artifacts/htmlcov
+      - name: Upload reports (pytest)
         uses: actions/upload-artifact@v4
         with:
           name: pytest_html_report
           path: artifacts/pytest_report.html
-      - name: Upload pytest JUnit XML
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest_junit_xml
-          path: artifacts/pytest_junit.xml
-      - name: Upload coverage XML
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage_xml
-          path: artifacts/coverage.xml
-      - name: Upload coverage HTML
+      - name: Upload coverage (HTML)
         uses: actions/upload-artifact@v4
         with:
           name: coverage_html
           path: artifacts/htmlcov
-      - name: Upload Selenium screenshots
+      - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -56,10 +54,10 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
-          cache: 'maven'
-      - name: Build, test, coverage, spotbugs
+          cache: maven
+      - name: Build & test & coverage & spotbugs
         run: mvn -B -f java_project/pom.xml clean verify spotbugs:spotbugs
       - name: Upload surefire reports
         if: always()
@@ -67,19 +65,19 @@ jobs:
         with:
           name: maven_surefire_reports
           path: java_project/target/surefire-reports
-      - name: Upload Jacoco HTML
+      - name: Upload jacoco HTML
         uses: actions/upload-artifact@v4
         with:
           name: jacoco_html
           path: java_project/target/site/jacoco
-      - name: Upload SpotBugs reports
+      - name: Upload spotbugs reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: spotbugs_reports
           path: |
-            java_project/target/spotbugsXml.xml
             java_project/target/spotbugs.html
+            java_project/target/spotbugsXml.xml
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
