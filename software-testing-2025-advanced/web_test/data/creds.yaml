@@ -1,0 +1,11 @@
+
+valid:
+  - username: "tomsmith"
+    password: "SuperSecretPassword!"
+invalid:
+  - username: "tomsmith"
+    password: "wrongpass"
+  - username: "unknown"
+    password: "SuperSecretPassword!"
+  - username: "user"
+    password: "pass"

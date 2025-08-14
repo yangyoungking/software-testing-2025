@@ -1,0 +1,87 @@
+
+name: ci-advanced
+on:
+  push:
+  pull_request:
+
+jobs:
+  python-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run pytest with coverage & reports
+        run: |
+          mkdir -p artifacts
+          pytest -q             --html=artifacts/pytest_report.html --self-contained-html             --junitxml=artifacts/pytest_junit.xml             --cov=app --cov=unit_test --cov=web_test             --cov-report=xml:artifacts/coverage.xml             --cov-report=html:artifacts/htmlcov
+      - name: Upload pytest HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest_html_report
+          path: artifacts/pytest_report.html
+      - name: Upload pytest JUnit XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest_junit_xml
+          path: artifacts/pytest_junit.xml
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_xml
+          path: artifacts/coverage.xml
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_html
+          path: artifacts/htmlcov
+      - name: Upload Selenium screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium_screenshots
+          path: artifacts/screenshots
+
+  java-maven:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+      - name: Build, test, coverage, spotbugs
+        run: mvn -B -f java_project/pom.xml clean verify spotbugs:spotbugs
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven_surefire_reports
+          path: java_project/target/surefire-reports
+      - name: Upload Jacoco HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco_html
+          path: java_project/target/site/jacoco
+      - name: Upload SpotBugs reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs_reports
+          path: |
+            java_project/target/spotbugsXml.xml
+            java_project/target/spotbugs.html
+      - name: Upload built JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven_target
+          path: java_project/target/*.jar
